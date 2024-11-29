@@ -4,10 +4,11 @@ venv/
 # Ignorar o arquivo de dependências
 requirements.txt
 
-SGHIST/_pycache_/Dataloader2.cpython-312.pyc
-
 # Ignorar o arquivo QTMI.txt
 QTMI.txt
 
 # Ignorar a pasta Dataset e seus conteúdos
 Dataset/
+
+# Ignorar a pasta de cache do Python
+Utils/__pycache__/
