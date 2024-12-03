@@ -18,7 +18,7 @@ if __name__ == '__main__':
     patience = 5
     min_delta = 0.001
     num_classes = 5
-    # subset_size = 500
+    subset_size = 200
     log_comment = "UNet_Training"
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -29,7 +29,7 @@ if __name__ == '__main__':
         batch_size=batch_size,
         size=size,
         shuffle=shuffle,
-        # subset=subset_size
+        subset=subset_size
     )
 
     train_loader = dataloader.get_train()
