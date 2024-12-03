@@ -1,35 +1,25 @@
-import cv2
+import albumentations as A 
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from albumentations.pytorch import ToTensorV2
-from albumentations import Compose, Resize, HorizontalFlip, VerticalFlip
-from albumentations import RandomRotate90
-import os
-import torch
 from glob import glob
+import numpy as np
+import torch
+import cv2
+import os
 
 
 class Data(Dataset):
     def __init__(self, image_dir: str, split: str, transform=None, ext="png"):
         self.image_dir = os.path.join(image_dir, split, "Image")
-        self.mask_dir = os.path.join(image_dir, split, "Mask")
 
-        if not os.path.isdir(self.image_dir) or \
-           not os.path.isdir(self.mask_dir):
+        if not os.path.isdir(self.image_dir):
             raise FileNotFoundError(
-                f"Diretório {self.image_dir} ou {self.mask_dir} "
+                f"Diretório {self.image_dir} "
                 f"não encontrado."
             )
+        self.transform = transform
 
-        self.image_paths = sorted(glob(f"{self.image_dir}/*.{ext}"))
-        self.mask_paths = sorted(glob(f"{self.mask_dir}/*.{ext}"))
-
-        if len(self.image_paths) != len(self.mask_paths):
-            raise ValueError("O número de imagens e máscaras não corresponde.")
-
-        self.transform = transform or Compose([Resize(256, 256), ToTensorV2()])
-        self.mask_transform = Compose([
-            Resize(256, 256, interpolation=cv2.INTER_NEAREST)
-        ])
+        self.image_paths = glob(f"{self.image_dir}/*.{ext}")
 
     def __len__(self) -> int:
         return len(self.image_paths)
@@ -46,19 +36,32 @@ class Data(Dataset):
                 f"Dimensões de {image_path} e {mask_path} não correspondem."
             )
 
-        image = image.astype('float32') / 255.0
-        mask = (mask / 255.0).astype('float32')
-
         if self.transform:
             transformed = self.transform(image=image, mask=mask)
             image = transformed['image']
             mask = transformed['mask']
 
-        return image.to(torch.float32), mask.unsqueeze(0).to(torch.float32)
+        return image, mask
+
+
+class MyPreProcessing(A.BasicTransform):
+    def __init__(self, num_classes=5, always_apply=False, p=1.0):
+        super(MyPreProcessing, self).__init__(always_apply, p)
+        self.num_classes = num_classes
+
+    def apply(self, image, shape, **kwargs):
+        return (image / 255.).astype('float32')
+
+    def apply_to_mask(self, mask, **kwargs):
+        return np.eye(self.num_classes)[mask].astype('float32').transpose(2, 0, 1)
+
+    @property
+    def targets(self):
+        return {"image": self.apply, "mask": self.apply_to_mask}
 
 
 class Dataloader:
-    def __init__(self, image_dir: str, batch_size: int, size: int, 
+    def __init__(self, image_dir: str, batch_size: int, size: int,
                  shuffle: bool = True, subset: int = 0):
         self.image_dir = image_dir
         self.batch_size = batch_size
@@ -69,15 +72,15 @@ class Dataloader:
 
     def compose(self):
         return {
-            'train': Compose([
-                Resize(self.size, self.size),
-                HorizontalFlip(p=0.5),
-                VerticalFlip(p=0.5),
-                RandomRotate90(p=0.5),
+            'train': A.Compose([
+                A.HorizontalFlip(p=0.15),
+                A.VerticalFlip(p=0.15),
+                A.RandomRotate90(p=0.15),
+                MyPreProcessing(),
                 ToTensorV2(),
             ]),
-            'eval': Compose([Resize(self.size, self.size), ToTensorV2()]),
-            'test': Compose([Resize(self.size, self.size), ToTensorV2()]),
+            'eval': A.Compose([MyPreProcessing(), ToTensorV2()]),
+            'test': A.Compose([MyPreProcessing(), ToTensorV2()]),
         }
 
     def get_dataloader(self, split: str) -> DataLoader:

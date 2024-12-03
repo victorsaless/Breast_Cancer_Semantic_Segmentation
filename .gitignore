@@ -12,3 +12,6 @@ Dataset/
 
 # Ignorar a pasta de cache do Python
 Utils/__pycache__/
+
+# Ignorar as Runs do Tensorboard
+Runs/
