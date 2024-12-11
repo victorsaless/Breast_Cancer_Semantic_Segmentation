@@ -99,3 +99,43 @@ def validate_model(
     )
 
     return val_loss / len(val_loader), mean_dice, mean_iou
+
+def test_model(model, test_loader, criterion, device, num_classes=5, num_samples=3):
+    model.eval()
+    test_loss = 0.0
+    dice_scores, iou_scores = [], []
+
+    print("=== Iniciando avaliação no conjunto de teste ===")
+
+    with torch.no_grad():
+        for idx, (images, masks) in enumerate(test_loader):
+            images, masks = images.to(device), masks.to(device) 
+
+            outputs = model(images)
+
+            loss = criterion(outputs, masks)
+            test_loss += loss.item()
+
+            metrics = calculate_metrics(
+                outputs, masks, num_classes=num_classes,
+                include_background=True
+            )
+
+            dice_scores.append(metrics["mean_dice"])
+            iou_scores.append(metrics["mean_iou"])
+
+            if idx < num_samples:
+                print(f"Amostra {idx + 1}:")
+                print(f"Dice: {metrics['mean_dice']:.4f}, IoU: {metrics['mean_iou']:.4f}")
+
+    # Calculando as médias
+    mean_dice = sum(dice_scores) / len(dice_scores)
+    mean_iou = sum(iou_scores) / len(iou_scores)
+    test_loss = test_loss / len(test_loader)
+
+    print("\n=== Resultados do Conjunto de Teste ===")
+    print(f"Perda Média: {test_loss:.4f}")
+    print(f"Dice Médio: {mean_dice:.4f}")
+    print(f"IoU Médio: {mean_iou:.4f}")
+
+    return test_loss, mean_dice, mean_iou

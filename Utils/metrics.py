@@ -38,7 +38,7 @@ def calculate_iou(preds, masks, num_classes, include_background=True):
 
     return iou_scores
 
-
+    
 def calculate_metrics(
     outputs, masks, num_classes, threshold=0.5, include_background=True
 ):

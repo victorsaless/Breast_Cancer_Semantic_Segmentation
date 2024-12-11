@@ -48,7 +48,7 @@ if __name__ == "__main__":
     stride = 512
 
     dataset_path = 'Dataset/BCSS/'
-    split = 'test/'
+    split = 'eval/'
     images_path = glob(f'{dataset_path}{split}/Image/*')
     masks_path = glob(f'{dataset_path}{split}/Mask/*')
 
@@ -69,7 +69,9 @@ if __name__ == "__main__":
             for j in range(0, patches_image.shape[1], stride):
                 patch_mask = patches_mask[i, j, 0]
                 patch_image = patches_image[i, j, 0]
-                if patch_image.max() == 0:
+
+                non_zero_ratio = (patch_image > 0).sum() / patch_image.size 
+                if non_zero_ratio < 0.25:
                     continue
                 cv2.imwrite(path_image.replace('BCSS', 'PRE_BCSS').replace('.png', f'{i}{j}.png'), patch_image)
                 cv2.imwrite(path_mask.replace('BCSS', 'PRE_BCSS').replace('.png', f'{i}{j}.png'), patch_mask)
